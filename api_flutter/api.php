@@ -41,9 +41,11 @@ switch ($action) {
     case 'update':
         $id = $_POST['id'];
         $nombre = $_POST['nombre'];
-        $stmt = $pdo->prepare("UPDATE usuarios SET nombre = :nombre WHERE id = :id");
+        $email = $_POST['email'];
+        $stmt = $pdo->prepare("UPDATE usuarios SET nombre = :nombre, email = :email WHERE id = :id");
         $stmt->execute([
             ':nombre' => $nombre,
+            ':email' => $email,
             ':id' => $id
         ]);
         echo json_encode(["status" => "ok", "message" => "Usuario actualizado"]);

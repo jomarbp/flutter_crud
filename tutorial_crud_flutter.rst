@@ -141,19 +141,20 @@ Si tu servicio actual solo tiene el método ``obtenerUsuarios``, necesitas agreg
    import 'dart:convert';
    import 'package:http/http.dart' as http;
    import '../models/usuario.dart';
-
+   
    class UsuarioService {
-     // Cambia esta URL por la de tu servidor
-     static const String baseUrl = 'http://localhost/tu_proyecto/api.php';
-
-     // Tu método existente para obtener usuarios
+     static const String baseUrl = 'http://localhost/api_flutter/api.php';
+   
      static Future<List<Usuario>> obtenerUsuarios() async {
        try {
-         final response = await http.get(
-           Uri.parse('$baseUrl?operation=read'),
-           headers: {'Content-Type': 'application/json'},
+         final response = await http.post(
+           Uri.parse(baseUrl),
+           headers: {
+             'Content-Type': 'application/x-www-form-urlencoded',
+           },
+           body: 'action=read',
          );
-
+   
          if (response.statusCode == 200) {
            final List<dynamic> jsonData = json.decode(response.body);
            return jsonData.map((json) => Usuario.fromJson(json)).toList();
@@ -164,79 +165,67 @@ Si tu servicio actual solo tiene el método ``obtenerUsuarios``, necesitas agreg
          throw Exception('Error de conexión: $e');
        }
      }
-
-     // ¡NUEVOS MÉTODOS QUE DEBES AGREGAR!
-
-     // Método para actualizar un usuario
-     static Future<bool> actualizarUsuario(int id, String nombre, String email) async {
-       try {
-         final response = await http.post(
-           Uri.parse('$baseUrl?operation=update'),
-           headers: {'Content-Type': 'application/json'},
-           body: json.encode({
-             'id': id,
-             'nombre': nombre,
-             'email': email,
-           }),
-         );
-
-         if (response.statusCode == 200) {
-           final Map<String, dynamic> jsonData = json.decode(response.body);
-           return jsonData['success'] ?? false;
-         } else {
-           return false;
-         }
-       } catch (e) {
-         print('Error al actualizar usuario: $e');
-         return false;
-       }
-     }
-
-     // Método para eliminar un usuario
-     static Future<bool> eliminarUsuario(int id) async {
-       try {
-         final response = await http.post(
-           Uri.parse('$baseUrl?operation=delete'),
-           headers: {'Content-Type': 'application/json'},
-           body: json.encode({
-             'id': id,
-           }),
-         );
-
-         if (response.statusCode == 200) {
-           final Map<String, dynamic> jsonData = json.decode(response.body);
-           return jsonData['success'] ?? false;
-         } else {
-           return false;
-         }
-       } catch (e) {
-         print('Error al eliminar usuario: $e');
-         return false;
-       }
-     }
-
-     // Método para crear un usuario (opcional, si no lo tienes)
+   
      static Future<bool> crearUsuario(String nombre, String email, String password) async {
        try {
          final response = await http.post(
-           Uri.parse('$baseUrl?operation=create'),
-           headers: {'Content-Type': 'application/json'},
-           body: json.encode({
-             'nombre': nombre,
-             'email': email,
-             'password': password,
-           }),
+           Uri.parse(baseUrl),
+           headers: {
+             'Content-Type': 'application/x-www-form-urlencoded',
+           },
+           body: 'action=create&nombre=$nombre&email=$email&password=$password',
          );
-
+   
          if (response.statusCode == 200) {
            final Map<String, dynamic> jsonData = json.decode(response.body);
-           return jsonData['success'] ?? false;
+           return jsonData['status'] == 'ok';
          } else {
-           return false;
+           throw Exception('Error al crear usuario: ${response.statusCode}');
          }
        } catch (e) {
-         print('Error al crear usuario: $e');
-         return false;
+         throw Exception('Error de conexión: $e');
+       }
+     }
+   
+     static Future<bool> actualizarUsuario(int id, String nombre, String email) async {
+       try {
+         final response = await http.post(
+           Uri.parse(baseUrl),
+           headers: {
+             'Content-Type': 'application/x-www-form-urlencoded',
+           },
+           body: 'action=update&id=$id&nombre=$nombre&email=$email',
+         );
+   
+         if (response.statusCode == 200) {
+           final Map<String, dynamic> jsonData = json.decode(response.body);
+           return jsonData['status'] == 'ok';
+         } else {
+           throw Exception('Error al actualizar usuario: ${response.statusCode}');
+         }
+       } catch (e) {
+         throw Exception('Error de conexión: $e');
+       }
+     }
+   
+     static Future<bool> eliminarUsuario(int id) async {
+       try {
+         final response = await http.post(
+           Uri.parse(baseUrl),
+           headers: {
+             'Content-Type': 'application/x-www-form-urlencoded',
+           },
+           body: 'action=delete&id=$id',
+         );
+   
+         if (response.statusCode == 200) {
+           final Map<String, dynamic> jsonData = json.decode(response.body);
+           return jsonData['status'] == 'ok';
+         } else {
+           throw Exception('Error al eliminar usuario: ${response.statusCode}');
+         }
+       } catch (e) {
+         throw Exception('Error de conexión: $e');
        }
      }
    }

@@ -54,7 +54,8 @@ Si tu archivo ``api.php`` actual solo tiene el método ``read``, necesitas agreg
 
 .. code-block:: php
 
-   <?php
+   ``
+<?php
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
@@ -118,6 +119,7 @@ switch ($action) {
         break;
 }
 ?>
+``
 
 **✅ Verificación del Paso 1**
 

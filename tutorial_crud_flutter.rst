@@ -55,102 +55,69 @@ Si tu archivo ``api.php`` actual solo tiene el método ``read``, necesitas agreg
 .. code-block:: php
 
    <?php
-   header("Access-Control-Allow-Origin: *");
-   header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-   header("Access-Control-Allow-Headers: Content-Type");
-   header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-   // Configuración de la base de datos
-   $servername = "localhost";
-   $username = "root";
-   $password = "";
-   $dbname = "crud_flutter";
+require "conexion.php";
 
-   // Crear conexión
-   $conn = new mysqli($servername, $username, $password, $dbname);
+// Debug: Log all incoming data
+error_log("POST data: " . print_r($_POST, true));
+error_log("Raw input: " . file_get_contents('php://input'));
+error_log("Content-Type: " . (isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : 'not set'));
 
-   // Verificar conexión
-   if ($conn->connect_error) {
-       die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
-   }
+// Leer la acción enviada desde Flutter
+$action = $_POST['action'] ?? '';
 
-   // Obtener el método HTTP y la operación
-   $method = $_SERVER['REQUEST_METHOD'];
-   $operation = isset($_GET['operation']) ? $_GET['operation'] : '';
+// Debug: Log the action received
+error_log("Action received: " . $action);
 
-   switch ($operation) {
-       case 'read':
-           // Tu código existente para leer usuarios
-           $sql = "SELECT id, nombre, email FROM usuarios";
-           $result = $conn->query($sql);
-           
-           $usuarios = array();
-           if ($result->num_rows > 0) {
-               while($row = $result->fetch_assoc()) {
-                   $usuarios[] = $row;
-               }
-           }
-           echo json_encode($usuarios);
-           break;
-
-       case 'create':
-           // Tu código existente para crear usuarios (si lo tienes)
-           $data = json_decode(file_get_contents("php://input"), true);
-           $nombre = $data['nombre'];
-           $email = $data['email'];
-           $password = password_hash($data['password'], PASSWORD_DEFAULT);
-           
-           $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)";
-           $stmt = $conn->prepare($sql);
-           $stmt->bind_param("sss", $nombre, $email, $password);
-           
-           if ($stmt->execute()) {
-               echo json_encode(["success" => true, "message" => "Usuario creado exitosamente"]);
-           } else {
-               echo json_encode(["success" => false, "message" => "Error al crear usuario"]);
-           }
-           break;
-
-       // ¡NUEVOS CASOS QUE DEBES AGREGAR!
-       case 'update':
-           $data = json_decode(file_get_contents("php://input"), true);
-           $id = $data['id'];
-           $nombre = $data['nombre'];
-           $email = $data['email'];
-           
-           $sql = "UPDATE usuarios SET nombre = ?, email = ? WHERE id = ?";
-           $stmt = $conn->prepare($sql);
-           $stmt->bind_param("ssi", $nombre, $email, $id);
-           
-           if ($stmt->execute()) {
-               echo json_encode(["success" => true, "message" => "Usuario actualizado exitosamente"]);
-           } else {
-               echo json_encode(["success" => false, "message" => "Error al actualizar usuario"]);
-           }
-           break;
-
-       case 'delete':
-           $data = json_decode(file_get_contents("php://input"), true);
-           $id = $data['id'];
-           
-           $sql = "DELETE FROM usuarios WHERE id = ?";
-           $stmt = $conn->prepare($sql);
-           $stmt->bind_param("i", $id);
-           
-           if ($stmt->execute()) {
-               echo json_encode(["success" => true, "message" => "Usuario eliminado exitosamente"]);
-           } else {
-               echo json_encode(["success" => false, "message" => "Error al eliminar usuario"]);
-           }
-           break;
-
-       default:
-           echo json_encode(["error" => "Operación no válida"]);
-           break;
-   }
-
-   $conn->close();
-   ?>
+switch ($action) {
+    // CREATE
+    case 'create':
+        $nombre = $_POST['nombre'];
+        $email = $_POST['email'];
+        $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, email, password) VALUES (:nombre, :email, :password)");
+        $stmt->execute([
+            ':nombre' => $nombre,
+            ':email' => $email,
+            ':password' => $password
+        ]);
+        echo json_encode(["status" => "ok", "message" => "Usuario creado"]);
+        break;
+    // READ
+    case 'read':
+        $stmt = $pdo->query("SELECT id, nombre, email FROM usuarios");
+        $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($usuarios);
+        break;
+    // UPDATE
+    case 'update':
+        $id = $_POST['id'];
+        $nombre = $_POST['nombre'];
+        $email = $_POST['email'];
+        $stmt = $pdo->prepare("UPDATE usuarios SET nombre = :nombre, email = :email WHERE id = :id");
+        $stmt->execute([
+            ':nombre' => $nombre,
+            ':email' => $email,
+            ':id' => $id
+        ]);
+        echo json_encode(["status" => "ok", "message" => "Usuario actualizado"]);
+        break;
+    // DELETE
+    case 'delete':
+        $id = $_POST['id'];
+        $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        echo json_encode(["status" => "ok", "message" => "Usuario eliminado"]);
+        break;
+    default:
+        echo json_encode(["status" => "error", "message" => "Acción no válida"]);
+        break;
+}
+?>
 
 **✅ Verificación del Paso 1**
 

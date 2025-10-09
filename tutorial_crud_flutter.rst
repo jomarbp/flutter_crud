@@ -1,6 +1,6 @@
-===============================================
-Tutorial: Implementación de CRUD Completo en Flutter
-===============================================
+===============================================================================
+Tutorial: Agregar Funcionalidades de Editar y Eliminar a tu Lista de Usuarios
+===============================================================================
 
 :Autor: Instructor de Desarrollo Móvil
 :Fecha: Diciembre 2024
@@ -9,37 +9,914 @@ Tutorial: Implementación de CRUD Completo en Flutter
 
 .. contents:: Tabla de Contenidos
    :depth: 3
+   :local:
 
 Introducción
 ============
 
-Este tutorial te guiará paso a paso para implementar un sistema CRUD (Create, Read, Update, Delete) completo en Flutter, conectado a una API PHP. Al finalizar, tendrás una aplicación funcional que permite:
+Este tutorial te guiará paso a paso para **agregar las funcionalidades de editar y eliminar** a tu aplicación Flutter que ya tiene implementada la funcionalidad de **listar usuarios** en una tabla.
 
-- **Crear** nuevos usuarios
-- **Leer** y mostrar la lista de usuarios
-- **Actualizar** información de usuarios existentes
-- **Eliminar** usuarios del sistema
+**Punto de Partida**
 
-Prerrequisitos
-===============
+Asumimos que ya tienes:
 
-Antes de comenzar, asegúrate de tener:
+- ✅ Una aplicación Flutter funcionando
+- ✅ Una tabla que muestra usuarios (ID, Nombre, Email)
+- ✅ Conexión a base de datos MySQL
+- ✅ API PHP básica para obtener usuarios
+- ✅ Modelo ``Usuario`` y servicio ``UsuarioService`` básicos
 
-1. **Flutter SDK** instalado y configurado
-2. **Dart** configurado en tu IDE
-3. **Servidor web local** (XAMPP, WAMP, o similar)
-4. **Conocimientos básicos** de:
-   - Dart y Flutter
-   - PHP básico
-   - Conceptos de API REST
-   - Manejo de bases de datos MySQL
+**¿Qué vamos a agregar?**
 
-Estructura del Proyecto
-=======================
+- 🔧 **Botones de Editar y Eliminar** en cada fila de la tabla
+- 🔧 **Diálogo de edición** para modificar usuarios existentes
+- 🔧 **Diálogo de confirmación** para eliminar usuarios
+- 🔧 **Métodos en el servicio** para actualizar y eliminar
+- 🔧 **Endpoints PHP** para las operaciones UPDATE y DELETE
+- 🔧 **Botón flotante** para crear nuevos usuarios
 
-El proyecto está organizado de la siguiente manera::
+**Prerrequisitos**
 
-    crud_flutter/
+- Aplicación Flutter con lista de usuarios funcionando
+- Conocimientos básicos de Flutter y Dart
+- Servidor web con PHP y MySQL funcionando
+
+Paso 1: Actualizar la API PHP para Soportar UPDATE y DELETE
+===========================================================
+
+**¿Qué vamos a hacer?**
+
+Primero necesitamos agregar los endpoints para actualizar y eliminar usuarios en nuestro archivo PHP.
+
+**Archivo: api.php (Modificaciones)**
+
+Si tu archivo ``api.php`` actual solo tiene el método ``read``, necesitas agregar los casos para ``update`` y ``delete``:
+
+.. code-block:: php
+
+   <?php
+   header("Access-Control-Allow-Origin: *");
+   header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+   header("Access-Control-Allow-Headers: Content-Type");
+   header("Content-Type: application/json");
+
+   // Configuración de la base de datos
+   $servername = "localhost";
+   $username = "root";
+   $password = "";
+   $dbname = "crud_flutter";
+
+   // Crear conexión
+   $conn = new mysqli($servername, $username, $password, $dbname);
+
+   // Verificar conexión
+   if ($conn->connect_error) {
+       die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
+   }
+
+   // Obtener el método HTTP y la operación
+   $method = $_SERVER['REQUEST_METHOD'];
+   $operation = isset($_GET['operation']) ? $_GET['operation'] : '';
+
+   switch ($operation) {
+       case 'read':
+           // Tu código existente para leer usuarios
+           $sql = "SELECT id, nombre, email FROM usuarios";
+           $result = $conn->query($sql);
+           
+           $usuarios = array();
+           if ($result->num_rows > 0) {
+               while($row = $result->fetch_assoc()) {
+                   $usuarios[] = $row;
+               }
+           }
+           echo json_encode($usuarios);
+           break;
+
+       case 'create':
+           // Tu código existente para crear usuarios (si lo tienes)
+           $data = json_decode(file_get_contents("php://input"), true);
+           $nombre = $data['nombre'];
+           $email = $data['email'];
+           $password = password_hash($data['password'], PASSWORD_DEFAULT);
+           
+           $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)";
+           $stmt = $conn->prepare($sql);
+           $stmt->bind_param("sss", $nombre, $email, $password);
+           
+           if ($stmt->execute()) {
+               echo json_encode(["success" => true, "message" => "Usuario creado exitosamente"]);
+           } else {
+               echo json_encode(["success" => false, "message" => "Error al crear usuario"]);
+           }
+           break;
+
+       // ¡NUEVOS CASOS QUE DEBES AGREGAR!
+       case 'update':
+           $data = json_decode(file_get_contents("php://input"), true);
+           $id = $data['id'];
+           $nombre = $data['nombre'];
+           $email = $data['email'];
+           
+           $sql = "UPDATE usuarios SET nombre = ?, email = ? WHERE id = ?";
+           $stmt = $conn->prepare($sql);
+           $stmt->bind_param("ssi", $nombre, $email, $id);
+           
+           if ($stmt->execute()) {
+               echo json_encode(["success" => true, "message" => "Usuario actualizado exitosamente"]);
+           } else {
+               echo json_encode(["success" => false, "message" => "Error al actualizar usuario"]);
+           }
+           break;
+
+       case 'delete':
+           $data = json_decode(file_get_contents("php://input"), true);
+           $id = $data['id'];
+           
+           $sql = "DELETE FROM usuarios WHERE id = ?";
+           $stmt = $conn->prepare($sql);
+           $stmt->bind_param("i", $id);
+           
+           if ($stmt->execute()) {
+               echo json_encode(["success" => true, "message" => "Usuario eliminado exitosamente"]);
+           } else {
+               echo json_encode(["success" => false, "message" => "Error al eliminar usuario"]);
+           }
+           break;
+
+       default:
+           echo json_encode(["error" => "Operación no válida"]);
+           break;
+   }
+
+   $conn->close();
+   ?>
+
+**✅ Verificación del Paso 1**
+
+- [ ] Agregaste los casos ``update`` y ``delete`` a tu ``api.php``
+- [ ] Probaste que tu API sigue funcionando para listar usuarios
+
+Paso 2: Actualizar el Servicio UsuarioService
+==============================================
+
+**¿Qué vamos a hacer?**
+
+Ahora necesitamos agregar los métodos ``actualizarUsuario`` y ``eliminarUsuario`` a nuestro servicio Flutter.
+
+**Archivo: lib/services/usuario_service.dart (Modificaciones)**
+
+Si tu servicio actual solo tiene el método ``obtenerUsuarios``, necesitas agregar estos métodos:
+
+.. code-block:: dart
+
+   import 'dart:convert';
+   import 'package:http/http.dart' as http;
+   import '../models/usuario.dart';
+
+   class UsuarioService {
+     // Cambia esta URL por la de tu servidor
+     static const String baseUrl = 'http://localhost/tu_proyecto/api.php';
+
+     // Tu método existente para obtener usuarios
+     static Future<List<Usuario>> obtenerUsuarios() async {
+       try {
+         final response = await http.get(
+           Uri.parse('$baseUrl?operation=read'),
+           headers: {'Content-Type': 'application/json'},
+         );
+
+         if (response.statusCode == 200) {
+           final List<dynamic> jsonData = json.decode(response.body);
+           return jsonData.map((json) => Usuario.fromJson(json)).toList();
+         } else {
+           throw Exception('Error al cargar usuarios: ${response.statusCode}');
+         }
+       } catch (e) {
+         throw Exception('Error de conexión: $e');
+       }
+     }
+
+     // ¡NUEVOS MÉTODOS QUE DEBES AGREGAR!
+
+     // Método para actualizar un usuario
+     static Future<bool> actualizarUsuario(int id, String nombre, String email) async {
+       try {
+         final response = await http.post(
+           Uri.parse('$baseUrl?operation=update'),
+           headers: {'Content-Type': 'application/json'},
+           body: json.encode({
+             'id': id,
+             'nombre': nombre,
+             'email': email,
+           }),
+         );
+
+         if (response.statusCode == 200) {
+           final Map<String, dynamic> jsonData = json.decode(response.body);
+           return jsonData['success'] ?? false;
+         } else {
+           return false;
+         }
+       } catch (e) {
+         print('Error al actualizar usuario: $e');
+         return false;
+       }
+     }
+
+     // Método para eliminar un usuario
+     static Future<bool> eliminarUsuario(int id) async {
+       try {
+         final response = await http.post(
+           Uri.parse('$baseUrl?operation=delete'),
+           headers: {'Content-Type': 'application/json'},
+           body: json.encode({
+             'id': id,
+           }),
+         );
+
+         if (response.statusCode == 200) {
+           final Map<String, dynamic> jsonData = json.decode(response.body);
+           return jsonData['success'] ?? false;
+         } else {
+           return false;
+         }
+       } catch (e) {
+         print('Error al eliminar usuario: $e');
+         return false;
+       }
+     }
+
+     // Método para crear un usuario (opcional, si no lo tienes)
+     static Future<bool> crearUsuario(String nombre, String email, String password) async {
+       try {
+         final response = await http.post(
+           Uri.parse('$baseUrl?operation=create'),
+           headers: {'Content-Type': 'application/json'},
+           body: json.encode({
+             'nombre': nombre,
+             'email': email,
+             'password': password,
+           }),
+         );
+
+         if (response.statusCode == 200) {
+           final Map<String, dynamic> jsonData = json.decode(response.body);
+           return jsonData['success'] ?? false;
+         } else {
+           return false;
+         }
+       } catch (e) {
+         print('Error al crear usuario: $e');
+         return false;
+       }
+     }
+   }
+
+**✅ Verificación del Paso 2**
+
+- [ ] Agregaste el método ``actualizarUsuario`` a tu servicio
+- [ ] Agregaste el método ``eliminarUsuario`` a tu servicio
+- [ ] Verificaste que la URL base apunta a tu servidor
+
+Paso 3: Agregar Columna de Acciones a la Tabla
+===============================================
+
+**¿Qué vamos a hacer?**
+
+Ahora vamos a modificar tu tabla existente para agregar una columna "Acciones" con botones de editar y eliminar.
+
+**Archivo: lib/main.dart (Modificación de la tabla)**
+
+**ANTES:** Tu tabla probablemente se ve así:
+
+.. code-block:: dart
+
+   // En tu método build(), dentro del Table para los headers
+   TableRow(
+     children: [
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text('ID', style: TextStyle(fontWeight: FontWeight.bold)),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold)),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text('Email', style: TextStyle(fontWeight: FontWeight.bold)),
+       ),
+       // ¡FALTA LA COLUMNA DE ACCIONES!
+     ],
+   ),
+
+**DESPUÉS:** Agrega la columna de acciones:
+
+.. code-block:: dart
+
+   // En tu método build(), dentro del Table para los headers
+   TableRow(
+     children: [
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           'ID',
+           style: const TextStyle(
+             color: Colors.white,
+             fontWeight: FontWeight.bold,
+             fontSize: 16,
+           ),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           'Nombre',
+           style: const TextStyle(
+             color: Colors.white,
+             fontWeight: FontWeight.bold,
+             fontSize: 16,
+           ),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           'Email',
+           style: const TextStyle(
+             color: Colors.white,
+             fontWeight: FontWeight.bold,
+             fontSize: 16,
+           ),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       // ¡NUEVA COLUMNA DE ACCIONES!
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           'Acciones',
+           style: const TextStyle(
+             color: Colors.white,
+             fontWeight: FontWeight.bold,
+             fontSize: 16,
+           ),
+           textAlign: TextAlign.center,
+         ),
+       ),
+     ],
+   ),
+
+**Y en las filas de datos:**
+
+**ANTES:** Tus filas probablemente se ven así:
+
+.. code-block:: dart
+
+   // En tu ListView.builder, dentro del Table para cada usuario
+   TableRow(
+     children: [
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(usuario.id.toString()),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(usuario.nombre),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(usuario.email),
+       ),
+       // ¡FALTAN LOS BOTONES DE ACCIÓN!
+     ],
+   ),
+
+**DESPUÉS:** Agrega los botones de acción:
+
+.. code-block:: dart
+
+   // En tu ListView.builder, dentro del Table para cada usuario
+   TableRow(
+     children: [
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           usuario.id.toString(),
+           style: const TextStyle(fontWeight: FontWeight.w500),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           usuario.nombre,
+           style: const TextStyle(fontWeight: FontWeight.w500),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Text(
+           usuario.email,
+           style: const TextStyle(color: Colors.grey),
+           textAlign: TextAlign.center,
+         ),
+       ),
+       // ¡NUEVOS BOTONES DE ACCIÓN!
+       Padding(
+         padding: const EdgeInsets.all(8.0),
+         child: Row(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             IconButton(
+               icon: const Icon(Icons.edit, color: Colors.blue),
+               onPressed: () => _mostrarDialogoEditar(usuario),
+               tooltip: 'Editar',
+             ),
+             IconButton(
+               icon: const Icon(Icons.delete, color: Colors.red),
+               onPressed: () => _confirmarEliminar(usuario),
+               tooltip: 'Eliminar',
+             ),
+           ],
+         ),
+       ),
+     ],
+   ),
+
+**✅ Verificación del Paso 3**
+
+- [ ] Agregaste la columna "Acciones" al header de tu tabla
+- [ ] Agregaste los botones de editar y eliminar a cada fila
+- [ ] Los botones llaman a ``_mostrarDialogoEditar`` y ``_confirmarEliminar``
+
+Paso 4: Implementar el Diálogo de Edición
+==========================================
+
+**¿Qué vamos a hacer?**
+
+Ahora vamos a crear la función ``_mostrarDialogoEditar`` que se ejecuta cuando el usuario presiona el botón de editar.
+
+**Archivo: lib/main.dart (Agregar método)**
+
+Agrega este método a tu clase ``_UsuariosPageState``:
+
+.. code-block:: dart
+
+   Future<void> _mostrarDialogoEditar(Usuario usuario) async {
+     final TextEditingController nombreController = TextEditingController(text: usuario.nombre);
+     final TextEditingController emailController = TextEditingController(text: usuario.email);
+
+     return showDialog<void>(
+       context: context,
+       barrierDismissible: false, // El usuario debe presionar un botón para cerrar
+       builder: (BuildContext context) {
+         return AlertDialog(
+           title: const Text(
+             'Editar Usuario',
+             style: TextStyle(fontWeight: FontWeight.bold),
+           ),
+           content: SingleChildScrollView(
+             child: ListBody(
+               children: <Widget>[
+                 TextField(
+                   controller: nombreController,
+                   decoration: const InputDecoration(
+                     labelText: 'Nombre',
+                     border: OutlineInputBorder(),
+                     prefixIcon: Icon(Icons.person),
+                   ),
+                 ),
+                 const SizedBox(height: 16),
+                 TextField(
+                   controller: emailController,
+                   decoration: const InputDecoration(
+                     labelText: 'Email',
+                     border: OutlineInputBorder(),
+                     prefixIcon: Icon(Icons.email),
+                   ),
+                   keyboardType: TextInputType.emailAddress,
+                 ),
+               ],
+             ),
+           ),
+           actions: <Widget>[
+             TextButton(
+               child: const Text('Cancelar'),
+               onPressed: () {
+                 Navigator.of(context).pop();
+               },
+             ),
+             ElevatedButton(
+               child: const Text('Guardar'),
+               onPressed: () async {
+                 if (nombreController.text.isNotEmpty && emailController.text.isNotEmpty) {
+                   try {
+                     final success = await UsuarioService.actualizarUsuario(
+                       usuario.id,
+                       nombreController.text,
+                       emailController.text,
+                     );
+                     
+                     if (success) {
+                       Navigator.of(context).pop();
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(
+                           content: Text('Usuario actualizado correctamente'),
+                           backgroundColor: Colors.green,
+                         ),
+                       );
+                       cargarUsuarios(); // Recargar la lista
+                     } else {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(
+                           content: Text('Error al actualizar usuario'),
+                           backgroundColor: Colors.red,
+                         ),
+                       );
+                     }
+                   } catch (e) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                         content: Text('Error: $e'),
+                         backgroundColor: Colors.red,
+                       ),
+                     );
+                   }
+                 } else {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(
+                       content: Text('Por favor complete todos los campos'),
+                       backgroundColor: Colors.orange,
+                     ),
+                   );
+                 }
+               },
+             ),
+           ],
+         );
+       },
+     );
+   }
+
+**✅ Verificación del Paso 4**
+
+- [ ] Agregaste el método ``_mostrarDialogoEditar`` a tu clase
+- [ ] El método crea controladores con los valores actuales del usuario
+- [ ] El diálogo tiene campos para nombre y email
+- [ ] El botón "Guardar" llama a ``UsuarioService.actualizarUsuario``
+- [ ] Se muestra un SnackBar con el resultado de la operación
+
+Paso 5: Implementar el Diálogo de Confirmación de Eliminación
+=============================================================
+
+**¿Qué vamos a hacer?**
+
+Ahora vamos a crear la función ``_confirmarEliminar`` que se ejecuta cuando el usuario presiona el botón de eliminar.
+
+**Archivo: lib/main.dart (Agregar método)**
+
+Agrega este método a tu clase ``_UsuariosPageState``:
+
+.. code-block:: dart
+
+   Future<void> _confirmarEliminar(Usuario usuario) async {
+     return showDialog<void>(
+       context: context,
+       barrierDismissible: false,
+       builder: (BuildContext context) {
+         return AlertDialog(
+           title: const Text(
+             'Confirmar Eliminación',
+             style: TextStyle(fontWeight: FontWeight.bold),
+           ),
+           content: SingleChildScrollView(
+             child: ListBody(
+               children: <Widget>[
+                 const Icon(
+                   Icons.warning,
+                   color: Colors.orange,
+                   size: 48,
+                 ),
+                 const SizedBox(height: 16),
+                 Text(
+                   '¿Estás seguro de que deseas eliminar al usuario "${usuario.nombre}"?',
+                   textAlign: TextAlign.center,
+                 ),
+                 const SizedBox(height: 8),
+                 const Text(
+                   'Esta acción no se puede deshacer.',
+                   style: TextStyle(
+                     color: Colors.red,
+                     fontWeight: FontWeight.bold,
+                   ),
+                   textAlign: TextAlign.center,
+                 ),
+               ],
+             ),
+           ),
+           actions: <Widget>[
+             TextButton(
+               child: const Text('Cancelar'),
+               onPressed: () {
+                 Navigator.of(context).pop();
+               },
+             ),
+             ElevatedButton(
+               style: ElevatedButton.styleFrom(
+                 backgroundColor: Colors.red,
+                 foregroundColor: Colors.white,
+               ),
+               child: const Text('Eliminar'),
+               onPressed: () async {
+                 try {
+                   final success = await UsuarioService.eliminarUsuario(usuario.id);
+                   
+                   if (success) {
+                     Navigator.of(context).pop();
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(
+                         content: Text('Usuario eliminado correctamente'),
+                         backgroundColor: Colors.green,
+                       ),
+                     );
+                     cargarUsuarios(); // Recargar la lista
+                   } else {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(
+                         content: Text('Error al eliminar usuario'),
+                         backgroundColor: Colors.red,
+                       ),
+                     );
+                   }
+                 } catch (e) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(
+                       content: Text('Error: $e'),
+                       backgroundColor: Colors.red,
+                     ),
+                   );
+                 }
+               },
+             ),
+           ],
+         );
+       },
+     );
+   }
+
+**✅ Verificación del Paso 5**
+
+- [ ] Agregaste el método ``_confirmarEliminar`` a tu clase
+- [ ] El diálogo muestra el nombre del usuario a eliminar
+- [ ] Hay una advertencia clara sobre que la acción no se puede deshacer
+- [ ] El botón "Eliminar" llama a ``UsuarioService.eliminarUsuario``
+- [ ] Se muestra un SnackBar con el resultado de la operación
+
+Paso 6: Agregar Botón Flotante para Crear Usuarios (Opcional)
+=============================================================
+
+**¿Qué vamos a hacer?**
+
+Como bonus, vamos a agregar un botón flotante para crear nuevos usuarios.
+
+**Archivo: lib/main.dart (Modificar el Scaffold)**
+
+En tu método ``build()``, agrega el ``floatingActionButton`` al ``Scaffold``:
+
+.. code-block:: dart
+
+   @override
+   Widget build(BuildContext context) {
+     return Scaffold(
+       appBar: AppBar(
+         title: const Text('Lista de Usuarios'),
+         // ... tu código existente del AppBar
+       ),
+       body: Container(
+         // ... tu código existente del body
+       ),
+       // ¡AGREGAR ESTE BOTÓN FLOTANTE!
+       floatingActionButton: FloatingActionButton(
+         onPressed: _mostrarDialogoCrear,
+         backgroundColor: Colors.blue[700],
+         foregroundColor: Colors.white,
+         child: const Icon(Icons.add),
+         tooltip: 'Agregar Usuario',
+       ),
+     );
+   }
+
+**Y agregar el método para crear usuarios:**
+
+.. code-block:: dart
+
+   Future<void> _mostrarDialogoCrear() async {
+     final TextEditingController nombreController = TextEditingController();
+     final TextEditingController emailController = TextEditingController();
+     final TextEditingController passwordController = TextEditingController();
+
+     return showDialog<void>(
+       context: context,
+       barrierDismissible: false,
+       builder: (BuildContext context) {
+         return AlertDialog(
+           title: const Text(
+             'Crear Nuevo Usuario',
+             style: TextStyle(fontWeight: FontWeight.bold),
+           ),
+           content: SingleChildScrollView(
+             child: ListBody(
+               children: <Widget>[
+                 TextField(
+                   controller: nombreController,
+                   decoration: const InputDecoration(
+                     labelText: 'Nombre',
+                     border: OutlineInputBorder(),
+                     prefixIcon: Icon(Icons.person),
+                   ),
+                 ),
+                 const SizedBox(height: 16),
+                 TextField(
+                   controller: emailController,
+                   decoration: const InputDecoration(
+                     labelText: 'Email',
+                     border: OutlineInputBorder(),
+                     prefixIcon: Icon(Icons.email),
+                   ),
+                   keyboardType: TextInputType.emailAddress,
+                 ),
+                 const SizedBox(height: 16),
+                 TextField(
+                   controller: passwordController,
+                   decoration: const InputDecoration(
+                     labelText: 'Contraseña',
+                     border: OutlineInputBorder(),
+                     prefixIcon: Icon(Icons.lock),
+                   ),
+                   obscureText: true,
+                 ),
+               ],
+             ),
+           ),
+           actions: <Widget>[
+             TextButton(
+               child: const Text('Cancelar'),
+               onPressed: () {
+                 Navigator.of(context).pop();
+               },
+             ),
+             ElevatedButton(
+               child: const Text('Crear'),
+               onPressed: () async {
+                 if (nombreController.text.isNotEmpty && 
+                     emailController.text.isNotEmpty && 
+                     passwordController.text.isNotEmpty) {
+                   try {
+                     final success = await UsuarioService.crearUsuario(
+                       nombreController.text,
+                       emailController.text,
+                       passwordController.text,
+                     );
+                     
+                     if (success) {
+                       Navigator.of(context).pop();
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(
+                           content: Text('Usuario creado correctamente'),
+                           backgroundColor: Colors.green,
+                         ),
+                       );
+                       cargarUsuarios();
+                     } else {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(
+                           content: Text('Error al crear usuario'),
+                           backgroundColor: Colors.red,
+                         ),
+                       );
+                     }
+                   } catch (e) {
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                         content: Text('Error: $e'),
+                         backgroundColor: Colors.red,
+                       ),
+                     );
+                   }
+                 } else {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(
+                       content: Text('Por favor complete todos los campos'),
+                       backgroundColor: Colors.orange,
+                     ),
+                   );
+                 }
+               },
+             ),
+           ],
+         );
+       },
+     );
+   }
+
+**✅ Verificación del Paso 6**
+
+- [ ] Agregaste el ``FloatingActionButton`` al ``Scaffold``
+- [ ] Agregaste el método ``_mostrarDialogoCrear``
+- [ ] El diálogo tiene campos para nombre, email y contraseña
+- [ ] El botón "Crear" llama a ``UsuarioService.crearUsuario``
+
+Paso 7: Probar la Aplicación
+=============================
+
+**¿Qué vamos a hacer?**
+
+Ahora vamos a probar que todas las funcionalidades funcionen correctamente.
+
+**Ejecutar la aplicación:**
+
+.. code-block:: bash
+
+   flutter run
+
+**Lista de verificación de funcionalidades:**
+
+**✅ Funcionalidades a probar:**
+
+1. **Listar usuarios:**
+   - [ ] La tabla muestra todos los usuarios de la base de datos
+   - [ ] Se muestran las columnas: ID, Nombre, Email, Acciones
+
+2. **Editar usuario:**
+   - [ ] Al presionar el botón de editar (lápiz azul) se abre el diálogo
+   - [ ] Los campos se llenan con los datos actuales del usuario
+   - [ ] Al guardar, se actualiza la información en la base de datos
+   - [ ] La tabla se actualiza automáticamente
+   - [ ] Se muestra un mensaje de confirmación
+
+3. **Eliminar usuario:**
+   - [ ] Al presionar el botón de eliminar (basura roja) se abre el diálogo de confirmación
+   - [ ] Se muestra el nombre del usuario a eliminar
+   - [ ] Al confirmar, el usuario se elimina de la base de datos
+   - [ ] La tabla se actualiza automáticamente
+   - [ ] Se muestra un mensaje de confirmación
+
+4. **Crear usuario (si implementaste el paso 6):**
+   - [ ] Al presionar el botón flotante (+) se abre el diálogo de creación
+   - [ ] Se pueden llenar todos los campos
+   - [ ] Al crear, se agrega el usuario a la base de datos
+   - [ ] La tabla se actualiza automáticamente
+   - [ ] Se muestra un mensaje de confirmación
+
+**Posibles errores y soluciones:**
+
+**Error de conexión a la API:**
+- Verifica que tu servidor web esté ejecutándose
+- Verifica que la URL en ``UsuarioService`` sea correcta
+- Verifica que el archivo ``api.php`` esté en la ubicación correcta
+
+**Error de CORS:**
+- Asegúrate de que tu ``api.php`` tenga los headers de CORS correctos
+
+**Error de base de datos:**
+- Verifica que la base de datos ``crud_flutter`` exista
+- Verifica que la tabla ``usuarios`` tenga las columnas correctas
+- Verifica las credenciales de conexión en ``api.php``
+
+Resumen de lo que Agregaste
+===========================
+
+**🎉 ¡Felicitaciones!** Has agregado exitosamente las funcionalidades de editar y eliminar a tu aplicación Flutter.
+
+**Resumen de cambios realizados:**
+
+1. **API PHP:** Agregaste los endpoints ``update`` y ``delete``
+2. **Servicio Flutter:** Agregaste los métodos ``actualizarUsuario`` y ``eliminarUsuario``
+3. **Interfaz de usuario:** Agregaste la columna "Acciones" con botones de editar y eliminar
+4. **Diálogos:** Implementaste diálogos para editar y confirmar eliminación
+5. **Funcionalidad extra:** Agregaste un botón flotante para crear usuarios
+
+**Funcionalidades que ahora tienes:**
+
+- ✅ **CREATE:** Crear nuevos usuarios
+- ✅ **READ:** Listar usuarios en una tabla
+- ✅ **UPDATE:** Editar usuarios existentes
+- ✅ **DELETE:** Eliminar usuarios con confirmación
+
+**Próximos pasos sugeridos:**
+
+1. **Validación:** Agregar validación de email y campos obligatorios
+2. **Búsqueda:** Implementar un campo de búsqueda para filtrar usuarios
+3. **Paginación:** Agregar paginación para manejar muchos usuarios
+4. **Diseño:** Mejorar el diseño visual de la aplicación
+5. **Seguridad:** Implementar autenticación y autorización
+
+¡Tu aplicación CRUD está completa y funcional! 🚀
     ├── lib/
     │   ├── main.dart              # Interfaz principal
     │   ├── models/

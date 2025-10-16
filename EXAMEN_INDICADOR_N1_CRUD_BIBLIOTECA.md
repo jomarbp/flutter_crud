@@ -10,7 +10,7 @@
 **Indicador de Logro N°1:** Implementa operaciones CRUD completas utilizando Flutter como frontend, PHP como API backend y MySQL como base de datos  
 **Modalidad:** Examen Práctico Individual  
 **Duración:** 4 horas académicas  
-**Fecha de Entrega:** [Definir fecha]  
+**Fecha de Entrega:** [16/10/2025]  
 **Peso Evaluativo:** 25% de la nota final  
 
 ---

@@ -10,7 +10,7 @@
 **Indicador de Logro N°1:** Implementa operaciones CRUD completas utilizando Flutter como frontend, PHP como API backend y MySQL como base de datos  
 **Modalidad:** Examen Práctico Individual  
 **Duración:** 4 horas académicas  
-**Fecha de Entrega:** [16/10/2025]  
+**Fecha de Entrega:** [Definir fecha]  
 **Peso Evaluativo:** 25% de la nota final  
 
 ---
@@ -148,27 +148,28 @@ dependencies:
 ---
 
 ## 🎯 **CRITERIOS DE EVALUACIÓN**
+### **CALIFICACIÓN TOTAL: 20 PUNTOS**
 
-### **Funcionalidad (40 puntos)**
-| Criterio | Excelente (4) | Bueno (3) | Regular (2) | Deficiente (1) |
-|----------|---------------|-----------|-------------|----------------|
+### **Funcionalidad (8 puntos)**
+| Criterio | Excelente (2.0) | Bueno (1.5) | Regular (1.0) | Deficiente (0.5) |
+|----------|-----------------|-------------|---------------|------------------|
 | **CREATE** | Funciona perfectamente con validaciones | Funciona con validaciones básicas | Funciona sin validaciones | No funciona |
 | **READ** | Lista completa con diseño atractivo | Lista básica funcional | Lista con errores menores | No funciona |
 | **UPDATE** | Edición completa y validada | Edición básica funcional | Edición con errores | No funciona |
 | **DELETE** | Eliminación con confirmación | Eliminación básica | Eliminación sin confirmación | No funciona |
 
-### **Calidad Técnica (30 puntos)**
-- **Arquitectura:** Separación correcta de responsabilidades (10 pts)
-- **Código:** Limpieza, comentarios y buenas prácticas (10 pts)
-- **Base de Datos:** Diseño normalizado y eficiente (10 pts)
+### **Calidad Técnica (6 puntos)**
+- **Arquitectura:** Separación correcta de responsabilidades (2 pts)
+- **Código:** Limpieza, comentarios y buenas prácticas (2 pts)
+- **Base de Datos:** Diseño normalizado y eficiente (2 pts)
 
-### **Documentación (15 puntos)**
-- **Informe Técnico:** Completo y bien estructurado (10 pts)
-- **Comentarios en Código:** Explicaciones claras (5 pts)
+### **Documentación (3 puntos)**
+- **Informe Técnico:** Completo y bien estructurado (2 pts)
+- **Comentarios en Código:** Explicaciones claras (1 pt)
 
-### **Exposición (15 puntos)**
-- **Demostración:** Funcionalidad completa en vivo (8 pts)
-- **Explicación Técnica:** Claridad y dominio del tema (7 pts)
+### **Exposición (3 puntos)**
+- **Demostración:** Funcionalidad completa en vivo (1.5 pts)
+- **Explicación Técnica:** Claridad y dominio del tema (1.5 pts)
 
 ---
 
@@ -236,15 +237,15 @@ APELLIDO_NOMBRE_EXAMEN_N1/
 - ✅ **Permitido** consultar documentación oficial
 
 ### **Penalizaciones:**
-- **Entrega tardía:** -10 puntos por día
-- **Código no funcional:** -20 puntos
+- **Entrega tardía:** -2 puntos por día
+- **Código no funcional:** -4 puntos
 - **Plagio detectado:** Calificación de 0
-- **No presentar exposición:** -15 puntos
+- **No presentar exposición:** -3 puntos
 
-### **Puntos Extra (máximo 5 puntos):**
-- 🔍 **Búsqueda avanzada** por múltiples criterios (+2 pts)
-- 📊 **Dashboard** con estadísticas (+2 pts)
-- 🎨 **Diseño UI/UX** excepcional (+1 pt)
+### **Puntos Extra (máximo 1 punto):**
+- 🔍 **Búsqueda avanzada** por múltiples criterios (+0.5 pts)
+- 📊 **Dashboard** con estadísticas (+0.3 pts)
+- 🎨 **Diseño UI/UX** excepcional (+0.2 pts)
 
 ---
 

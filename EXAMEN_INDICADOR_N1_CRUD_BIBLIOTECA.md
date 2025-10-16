@@ -257,8 +257,7 @@ APELLIDO_NOMBRE_EXAMEN_N1/
 - Resolución de problemas de lógica: No permitida
 
 **Contacto Docente:**
-- Email: [correo_docente]
-- Horario de consultas: [horario]
+- Email: [jomar.bp17@gmail.com]
 
 ---
 

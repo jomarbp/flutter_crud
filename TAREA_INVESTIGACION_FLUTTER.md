@@ -217,7 +217,7 @@ Implementar en `lib/` un módulo CRUD de productos que consuma la API en `backen
 #### **Entregables prácticos:**
 - Código funcional en `lib/` y `backend/`
 - Archivo `README.md` con instrucciones de ejecución
-- Colección Postman/Insomnia o script de pruebas de API
+- Colección Insomnia (recomendado) o Postman, o script de pruebas de API
 - 5+ pruebas en Flutter (unit/widget/integration)
 - 3+ capturas o GIF del flujo CRUD
 
@@ -310,7 +310,7 @@ Implementar en `lib/` un módulo CRUD de productos que consuma la API en `backen
 - Guías de arquitectura limpia (Clean Architecture)
 
 ### **Herramientas:**
-- Postman/Insomnia, Flutter DevTools
+- Insomnia (recomendado) y/o Postman, Flutter DevTools
 - Linter y formatters (analyzer, dartfmt)
 
 ---
